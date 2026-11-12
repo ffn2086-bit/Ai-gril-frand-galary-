@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
@@ -99,7 +100,10 @@ class _ChatPageState extends State<ChatPage> {
   String partial = '', lastReply = '';
   bool get auto => handsFree || inCall;
   String get ttsLocale => {'Malayalam': 'ml-IN', 'Hindi': 'hi-IN'}[lang] ?? 'en-IN';
-  String get sttLocale => {'Malayalam': 'ml_IN', 'Hindi': 'hi_IN'}[lang] ?? 'en_IN';
+  String get sttLocale {
+    final code = {'Malayalam': 'ml-IN', 'Manglish': 'ml-IN', 'Hindi': 'hi-IN'}[lang] ?? 'en-IN';
+    return kIsWeb ? code : code.replaceAll('-', '_');
+  }
 
   String get apiKey => prefs.getString('apiKey') ?? '';
   String get gfName => prefs.getString('gfName') ?? 'Anu';
@@ -135,6 +139,9 @@ class _ChatPageState extends State<ChatPage> {
       if (s == 'done' || s == 'notListening') setState(() => listening = false);
     }, onError: (e) {
       setState(() => listening = false);
+      if (mounted && e.errorMsg != 'error_no_match' && e.errorMsg != 'no-speech' && e.errorMsg != 'error_speech_timeout') {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Mic: ${e.errorMsg}')));
+      }
       if (auto && !busy && !speaking) {
         Future.delayed(const Duration(seconds: 1), startListening);
       }
